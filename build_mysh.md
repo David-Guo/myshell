@@ -35,34 +35,7 @@ void mysh_print_promt() {
 * 字符串处理，分割字符字符串到 command 结构中
 * 链表初始化后怎么释放申请的内存？
 
-#include <string.h>j
-函数struct command* mysh_parse_command(char *line)
 
-struct command* command;
-char* pStart = line;
-while ( (*pStart != '\n') && (*pStart != '\0') ){
-	if ( *pStart == '&' ） command->mode = BACKGROUND_EXECUTION;
-	else command->mode = FOREGROUND_EXECUTION;
-	pStrat++;	
-}
-char* res;
-while ( (res = strsep(&line, " ")) != NULL ){
-	*command->root->args++ = strdup(res);
-}
-return command;
-
-函数int mysh_exec_command(struct command*)
-
-int rtun;
-rtun = fork();
-if ( rtun == 0 ){
-	rtun = execvp(*command->root->args, command->root->args);
-	}
-else{
-	wait(&status);
-	if(status == 0) printf("%s exit abnormally", *command->root->args);
-}
-return rtun;
 
 
 

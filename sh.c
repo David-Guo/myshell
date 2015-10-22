@@ -51,10 +51,75 @@ int mysh_execute_buildin_command(struct command_segment *segment){
     return 0;
 }
 
+int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
+    int status = 1;
+
+    /* Check if it's a build in command first */
+    if (mysh_execute_buildin_command(segment)) {
+        return -1; 
+    }
+
+    /* Fork a process and execute the program */
+    pid_t childpid;
+    childpid = fork();
+    if (childpid < 0) {
+        printf("fork failed\n");
+    }
+    else if (childpid == 0) {
+        printf("child process\n");
+        int mypid = getpid();
+        printf("Command execute by pid %d\n", mypid);
+        /*char buffer[COMMAND_BUFSIZE];*/
+        /*int i;*/
+        dup2(in_fd, 0);
+        dup2(out_fd, 1);
+        /*if (in_fd != 0) {*/
+            /*scanf("%s", buffer);*/
+            /*for (i = 0; segment->args[i] != NULL; i++)*/
+                /*;*/
+            /*segment->args[i] = buffer;*/
+            /*segment->args[++i] = NULL;*/
+        /*}*/
+        if (execvp(segment->args[0], segment->args) < 0)
+            printf(" *** ERROR: exec %s failed\n", segment->args[0]); 
+        exit(1);
+    }
+    else {
+        wait(&status);
+        printf("parent process\n");
+    }
+    return status;
+}
+
 int mysh_execute_command(struct command *command) {
     int status = 1;
-    struct command_segment* cur; 
+    struct command_segment* cur;
     struct command_segment* pfree;
+
+/*    if (command->root->next == NULL) {*/
+        /*[> There is only a root segment <]*/
+        /*status = mysh_execute_command_segment(command->root, 0, 1, 1, 0);*/
+        /*free(command->root);*/
+        /*free(command);*/
+        /*return status;*/
+    /*}*/
+    
+    int temp_fd = 0;
+    for (cur = command->root; cur != NULL; cur = cur->next) {
+        /* Creat pipe if necessary */
+        if (cur->next) {
+            int fd[2];
+            pipe(fd);
+            status = mysh_execute_command_segment(cur, temp_fd, fd[1], command->mode, 0);
+            temp_fd = fd[0];
+        }
+        /* Call mysh_execute_command_segment(...) to execute command segment */
+        else {
+            status = mysh_execute_command_segment(cur, temp_fd, 1, command->mode, 0);
+        }
+    }
+
+    /* print the decompoted command and free the space */
     cur = command->root;
     pfree = cur; 
     while (cur != NULL) {
@@ -66,7 +131,6 @@ int mysh_execute_command(struct command *command) {
         free(pfree);
         pfree = cur;
     }
-
     cur = NULL;
     pfree = NULL;
     free(command);
@@ -76,22 +140,24 @@ int mysh_execute_command(struct command *command) {
 
 
 struct command* mysh_parse_command(char *line) {
-    /* Parse line as command structure */
+    /* Dynamic malloc memory for the Link list */
     struct command* command = (struct command*)malloc(sizeof(struct command));
     command->root = (struct command_segment*)malloc(sizeof(struct command_segment));
     struct command_segment* cur;
     struct command_segment* pnew;
     cur = command->root; 
-
+    /* Check if it is background command */
     char* pStart = line;
-    int count;
+    int count = 0;
     while ((*pStart != '\n') && (*pStart != '\0')) {
-        if (*pStart == '&') count = 1; 
-	else count = 0;
+        if (*pStart == '&') {
+            count = 1; 
+            break;
+        }
         pStart++;
     }
     command->mode = count;
-
+    /* Parse line as command Link list */
     char *res = line;
     char *temp;
     int i = 0;
