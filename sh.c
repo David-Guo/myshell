@@ -66,27 +66,31 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         printf("fork failed\n");
     }
     else if (childpid == 0) {
-        printf("child process\n");
+        // printf("child process\n");
         int mypid = getpid();
         printf("Command execute by pid %d\n", mypid);
-        /*char buffer[COMMAND_BUFSIZE];*/
-        /*int i;*/
+
         dup2(in_fd, 0);
         dup2(out_fd, 1);
-        /*if (in_fd != 0) {*/
-            /*scanf("%s", buffer);*/
-            /*for (i = 0; segment->args[i] != NULL; i++)*/
-                /*;*/
-            /*segment->args[i] = buffer;*/
-            /*segment->args[++i] = NULL;*/
-        /*}*/
+        if(in_fd != 0){
+            close(in_fd);
+        }
+        if(out_fd != 1){
+            close(out_fd);
+        }
+
         if (execvp(segment->args[0], segment->args) < 0)
             printf(" *** ERROR: exec %s failed\n", segment->args[0]); 
-        exit(1);
     }
     else {
+        // printf("parent process\n");
         wait(&status);
-        printf("parent process\n");
+        if(in_fd != 0){
+            close(in_fd);
+        }
+        if(out_fd != 1){
+            close(out_fd);
+        }
     }
     return status;
 }
@@ -95,14 +99,6 @@ int mysh_execute_command(struct command *command) {
     int status = 1;
     struct command_segment* cur;
     struct command_segment* pfree;
-
-/*    if (command->root->next == NULL) {*/
-        /*[> There is only a root segment <]*/
-        /*status = mysh_execute_command_segment(command->root, 0, 1, 1, 0);*/
-        /*free(command->root);*/
-        /*free(command);*/
-        /*return status;*/
-    /*}*/
     
     int temp_fd = 0;
     for (cur = command->root; cur != NULL; cur = cur->next) {
@@ -123,10 +119,10 @@ int mysh_execute_command(struct command *command) {
     cur = command->root;
     pfree = cur; 
     while (cur != NULL) {
-        int i;
-        for (i = 0; i < MAXARG  && cur->args[i] != NULL; i++)
-            printf("%s\n", cur->args[i]);
-        printf("command segent end\n");
+        /*int i;*/
+        /*for (i = 0; i < MAXARG  && cur->args[i] != NULL; i++)*/
+            /*printf("%s\n", cur->args[i]);*/
+        /*printf("command segent end\n");*/
         cur = cur->next;
         free(pfree);
         pfree = cur;
@@ -181,7 +177,7 @@ char* mysh_read_line() {
     int bufsize = COMMAND_BUFSIZE;
     int position = 0;
     char *buffer = malloc(sizeof(char) * bufsize);
-    int c;
+    char c = 'c';
 
     if (!buffer) {
         fprintf(stderr, "-mysh: allocation error\n");
@@ -220,7 +216,7 @@ void mysh_print_promt() {
     printf("%s\n", pathbuf);
 
     /* Print ">mysh " */
-    printf(">mysh ");
+    printf("mysh > ");
 }
 
 void mysh_print_welcome() {
@@ -242,6 +238,7 @@ void mysh_loop() {
         command = mysh_parse_command(line);   // parse line as command structure
         status = mysh_execute_command(command);   // execute the command
         free(line);
+        //break;
     } while (status >= 0);
 }
 
