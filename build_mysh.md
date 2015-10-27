@@ -76,6 +76,19 @@ parent 中加入如下语句：
     signal(SIGINT, SIG_IGN);
     signal(SIGTSTP, SIG_IGN);
 
+### bug fix
+
+`Ctrl Z` 后会出现 parent process block 现象，原因是child process 捕获挂起信号后挂起，而parent 在wait 语句中等待child process 执行结束。
+
+需要使用`watipid` 的 `WUNTRACED` option, 表示当child stop 时`waitpid` 即可以返回，而不是block。
+
+参考 [man watipid](http://linux.die.net/man/2/waitpid)
+
+
+## 终端颜色
+
+可以同过设置printf 打印出彩色的提示，从而修饰shell 解释的显示风格。
+
 ## Reference
 
 

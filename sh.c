@@ -68,7 +68,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
     else if (childpid == 0) {
         // printf("child process\n");
         int mypid = getpid();
-        printf("Command execute by pid %d\n", mypid);
+        printf("\e[32mCommand execute by pid %d\e[0m\n", mypid);
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
@@ -88,7 +88,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         // printf("parent process\n");
         signal(SIGINT, SIG_IGN);
         signal(SIGTSTP, SIG_IGN);
-        waitpid(childpid, &status, 0);
+        waitpid(childpid, &status, WUNTRACED);
         if(in_fd != 0){
             close(in_fd);
         }
@@ -214,13 +214,13 @@ void mysh_print_promt() {
     /* Print "<username> in <current working directory>" */
     char namebuf[PATH_BUFSIZE];
     getlogin_r(namebuf, sizeof(namebuf));
-    printf("%s in ", namebuf);
+    printf("\e[34m%s\e[0m in ", namebuf);
     char pathbuf[PATH_BUFSIZE];
     getcwd(pathbuf, sizeof(pathbuf));
-    printf("%s\n", pathbuf);
+    printf("\e[34m%s\e[0m\n", pathbuf);
 
     /* Print ">mysh " */
-    printf("mysh > ");
+    printf("\e[33mmysh >\e[0m ");
 }
 
 void mysh_print_welcome() {
