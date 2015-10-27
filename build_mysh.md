@@ -59,8 +59,8 @@ void mysh_print_promt() {
 
 使用系统调用 `signal`
 
-* `Ctrl C` 产生 `SIGINT`
-* `Ctrl Z` 产生 `SIGTSTP`
+* `Ctrl C` 产生 `SIGINT`,默认动作是使进程结束
+* `Ctrl Z` 产生 `SIGTSTP`,默认动作是使进程停止
 * `SIG_DFL` 表示对信号的响应取默认
 * `SIG_IGN` 表示忽略捕获到的信号
 
@@ -84,6 +84,21 @@ parent 中加入如下语句：
 
 参考 [man watipid](http://linux.die.net/man/2/waitpid)
 
+
+## Job control
+
+* fg 实现将挂起的进程调到前台继续执行
+* bg 实现将挂起的进程在后台继续执行
+
+两者都要向进程号发送`SIGCONT`信号
+
+使用如下语句：
+
+    kill(pid, SIGCONT);
+
+在子进程中捕获该信号，并设置默认响应
+
+    signal(SIGCONT, SIG_DFL);
 
 ## 终端颜色
 

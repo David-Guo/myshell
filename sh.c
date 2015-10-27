@@ -40,8 +40,17 @@ void mysh_exit() {
 
 void mysh_fg(pid_t pid) {
     /* Implement fg command */
-    if (tcsetpgrp(0, getpgid(pid)) != 0)
-        perror("tcgetpgrp() error\n");
+    setpgid(pid, pid);
+    if (tcsetpgrp(1, getpgid(pid)) == 0)
+        kill(pid, SIGCONT);        /* sucess */
+    else 
+        printf("fg: job not found: %d\n", pid);
+}
+
+void mysh_bg(pid_t pid) {
+    /* Implement bg command */
+    if (kill(pid, SIGCONT) < 0)
+        printf("bg: job not found: %d\n", pid);
 }
 
 int mysh_execute_buildin_command(struct command_segment *segment){
@@ -59,7 +68,13 @@ int mysh_execute_buildin_command(struct command_segment *segment){
         mysh_fg(pid);
         return 1;
     }
-    return -1;
+    else if (strcmp(segment->args[0], "bg") == 0) {
+        pid_t pid;
+        pid = atoi(segment->args[1]);
+        mysh_bg(pid);
+        return 1;
+    }
+    else return -1;
 }
 /* Not cmd return -1; exit cmd return 0, other cmd return 1 */
 
@@ -85,6 +100,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
             printf("\e[32mCommand execute by pid %d\e[0m\n", mypid);
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
+        signal(SIGCONT, SIG_DFL);
 
         dup2(in_fd, 0);
         dup2(out_fd, 1);
@@ -102,6 +118,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         // printf("parent process\n");
         signal(SIGINT, SIG_IGN);
         signal(SIGTSTP, SIG_IGN);
+        signal(SIGCONT, SIG_DFL);
         if (mode == BACKGROUND_EXECUTION) 
             signal(SIGCLD, SIG_IGN);
         else 
