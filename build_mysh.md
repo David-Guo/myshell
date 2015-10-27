@@ -8,7 +8,7 @@
 
 实现如下：
 
-``C
+```C
 #define PATH_BUFSIZE 1024
 
 void mysh_print_promt() {
@@ -23,7 +23,7 @@ void mysh_print_promt() {
     /* Print ">mysh " */
     printf(">mysh");
 }
-``
+``````
 
 ## 2. Command Parser
 
@@ -46,6 +46,35 @@ void mysh_print_promt() {
 * cur 分别指向 who 和 sort 时如何区分二者的 in_fd
 
 * 不在child 和 parent 中加入 `close` 语句，parent 会出现 block
+
+## 4. Signal
+
+### 目标
+
+实现`Ctrl C`中断`mysh`创建的子进程，但不结束自身
+
+实现`Ctrl Z`将 `mysh` 创建的子进程挂起，但不将自身挂起
+
+### 理解
+
+使用系统调用 `signal`
+
+* `Ctrl C` 产生 `SIGINT`
+* `Ctrl Z` 产生 `SIGTSTP`
+* `SIG_DFL` 表示对信号的响应取默认
+* `SIG_IGN` 表示忽略捕获到的信号
+
+parent process 和 child process 都会捕获到键盘输入的信号，但是各自对信号的响应不同。
+
+所以要在child 中加入如下语句：
+
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTSTP, SIG_DFL);
+
+parent 中加入如下语句：
+
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
 
 ## Reference
 

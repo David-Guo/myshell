@@ -69,6 +69,8 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         // printf("child process\n");
         int mypid = getpid();
         printf("Command execute by pid %d\n", mypid);
+        signal(SIGINT, SIG_DFL);
+        signal(SIGTSTP, SIG_DFL);
 
         dup2(in_fd, 0);
         dup2(out_fd, 1);
@@ -84,7 +86,9 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
     }
     else {
         // printf("parent process\n");
-        wait(&status);
+        signal(SIGINT, SIG_IGN);
+        signal(SIGTSTP, SIG_IGN);
+        waitpid(childpid, &status, 0);
         if(in_fd != 0){
             close(in_fd);
         }
@@ -92,7 +96,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
             close(out_fd);
         }
     }
-    return status;
+    return 1;
 }
 
 int mysh_execute_command(struct command *command) {
@@ -177,7 +181,7 @@ char* mysh_read_line() {
     int bufsize = COMMAND_BUFSIZE;
     int position = 0;
     char *buffer = malloc(sizeof(char) * bufsize);
-    char c = 'c';
+    char c;
 
     if (!buffer) {
         fprintf(stderr, "-mysh: allocation error\n");
