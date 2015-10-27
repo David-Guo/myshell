@@ -6,6 +6,16 @@
 
 详细的实现细节见文档：[从零构建自己的mini shell](./build_mysh.md)
 
-## 功能要求与参考文旦 
+## 架构
+
+环境：ubuntu 14.4
+
+编译器：gcc
+
+main 函数和功能函数放在源文件 `sh.c` 
+
+执行 `make` 可生成 `mysh` 可执行文件
+
+## 功能要求与参考文档
 
 [HW1 process & IPC](./SPEC.md)

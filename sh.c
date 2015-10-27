@@ -11,8 +11,8 @@
 #define MAXARG 20
 #define TOKEN_BUFSIZE 64
 #define TOKEN_DELIMITERS " \t\r\n\a"
-#define BACKGROUND_EXECUTION 0
-#define FOREGROUND_EXECUTION 1
+#define BACKGROUND_EXECUTION 1
+#define FOREGROUND_EXECUTION 0
 #define PIPELINE_EXECUTION 2
 
 struct command_segment {
@@ -38,27 +38,38 @@ void mysh_exit() {
     
 }
 
+void mysh_fg(pid_t pid) {
+    /* Implement fg command */
+    if (tcsetpgrp(0, getpgid(pid)) != 0)
+        perror("tcgetpgrp() error\n");
+}
 
 int mysh_execute_buildin_command(struct command_segment *segment){
    /* Match if command name is a internal command */
     if (strcmp(segment->args[0], "cd") == 0) {
         mysh_cd(segment->args[1]);
-        return 0;
-    }
-    else if (strcmp(segment->args[0], "exit") == 0) {
         return 1;
     }
-    return 0;
+    else if (strcmp(segment->args[0], "exit") == 0) {
+        return 0;
+    }
+    else if (strcmp(segment->args[0], "fg") == 0) {
+        pid_t pid;
+        pid = atoi(segment->args[1]);
+        mysh_fg(pid);
+        return 1;
+    }
+    return -1;
 }
+/* Not cmd return -1; exit cmd return 0, other cmd return 1 */
 
 int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int out_fd, int mode, int pgid) {
     int status = 1;
-
+    int isInCmd = mysh_execute_buildin_command(segment);
     /* Check if it's a build in command first */
-    if (mysh_execute_buildin_command(segment)) {
-        return -1; 
-    }
-
+    if (isInCmd == 0)  return -1;        /* exit cmd */
+    else if (isInCmd > 0) return 1;      /* other buildin cmd */
+    
     /* Fork a process and execute the program */
     pid_t childpid;
     childpid = fork();
@@ -68,7 +79,10 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
     else if (childpid == 0) {
         // printf("child process\n");
         int mypid = getpid();
-        printf("\e[32mCommand execute by pid %d\e[0m\n", mypid);
+        if (mode == BACKGROUND_EXECUTION)
+            printf("\e[32mCommand execute by pid %d in background\e[0m\n", mypid);
+        else 
+            printf("\e[32mCommand execute by pid %d\e[0m\n", mypid);
         signal(SIGINT, SIG_DFL);
         signal(SIGTSTP, SIG_DFL);
 
@@ -88,7 +102,10 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         // printf("parent process\n");
         signal(SIGINT, SIG_IGN);
         signal(SIGTSTP, SIG_IGN);
-        waitpid(childpid, &status, WUNTRACED);
+        if (mode == BACKGROUND_EXECUTION) 
+            signal(SIGCLD, SIG_IGN);
+        else 
+            waitpid(childpid, &status, WUNTRACED);
         if(in_fd != 0){
             close(in_fd);
         }
@@ -113,7 +130,7 @@ int mysh_execute_command(struct command *command) {
             status = mysh_execute_command_segment(cur, temp_fd, fd[1], command->mode, 0);
             temp_fd = fd[0];
         }
-        /* Call mysh_execute_command_segment(...) to execute command segment */
+        /* out_fd 为标准输出1 */
         else {
             status = mysh_execute_command_segment(cur, temp_fd, 1, command->mode, 0);
         }
@@ -151,7 +168,8 @@ struct command* mysh_parse_command(char *line) {
     int count = 0;
     while ((*pStart != '\n') && (*pStart != '\0')) {
         if (*pStart == '&') {
-            count = 1; 
+            count = 1;
+            *pStart = '\0';
             break;
         }
         pStart++;
@@ -242,7 +260,6 @@ void mysh_loop() {
         command = mysh_parse_command(line);   // parse line as command structure
         status = mysh_execute_command(command);   // execute the command
         free(line);
-        //break;
     } while (status >= 0);
 }
 
