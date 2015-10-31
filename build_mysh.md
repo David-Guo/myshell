@@ -100,6 +100,14 @@ parent 中加入如下语句：
 
     signal(SIGCONT, SIG_DFL);
 
+### bug fix
+
+將挂起的子进程，fb 拉回前景或bg 继续使其在背景执行，那么子进程执行完后会变成zombie
+
+需要在fb 和 bg 函数中加入wait 语句等待子进程的结束。
+
+[Foreground and Background](http://www.gnu.org/software/libc/manual/html_node/Foreground-and-Background.html#Foreground-and-Background)
+
 ## 终端颜色
 
 可以同过设置printf 打印出彩色的提示，从而修饰shell 解释的显示风格。

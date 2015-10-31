@@ -41,16 +41,33 @@ void mysh_exit() {
 void mysh_fg(pid_t pid) {
     /* Implement fg command */
     setpgid(pid, pid);
-    if (tcsetpgrp(1, getpgid(pid)) == 0)
+    int status;
+    if (tcsetpgrp(1, getpgid(pid)) == 0) {
         kill(pid, SIGCONT);        /* sucess */
+        waitpid(pid, &status, WUNTRACED);
+    }
     else 
         printf("fg: job not found: %d\n", pid);
 }
 
 void mysh_bg(pid_t pid) {
     /* Implement bg command */
+    int status;
     if (kill(pid, SIGCONT) < 0)
         printf("bg: job not found: %d\n", pid);
+    else 
+        waitpid(pid, &status, WUNTRACED);
+}
+
+void mysh_kill(pid_t pid) {
+    /* Kill child process */
+   kill(pid, SIGKILL);
+}
+
+void sig_child(int signo) {
+    if (signo != SIGCHLD) return;
+    int status;
+    wait(&status);
 }
 
 int mysh_execute_buildin_command(struct command_segment *segment){
@@ -60,6 +77,7 @@ int mysh_execute_buildin_command(struct command_segment *segment){
         return 1;
     }
     else if (strcmp(segment->args[0], "exit") == 0) {
+        printf("Goodbye!\n");
         return 0;
     }
     else if (strcmp(segment->args[0], "fg") == 0) {
@@ -72,6 +90,12 @@ int mysh_execute_buildin_command(struct command_segment *segment){
         pid_t pid;
         pid = atoi(segment->args[1]);
         mysh_bg(pid);
+        return 1;
+    }
+    else if (strcmp(segment->args[0], "kill") == 0) {
+        pid_t pid;
+        pid = atoi(segment->args[1]);
+        mysh_kill(pid);
         return 1;
     }
     else return -1;
@@ -120,7 +144,7 @@ int mysh_execute_command_segment(struct command_segment *segment, int in_fd, int
         signal(SIGTSTP, SIG_IGN);
         signal(SIGCONT, SIG_DFL);
         if (mode == BACKGROUND_EXECUTION) 
-            signal(SIGCLD, SIG_IGN);
+            signal(SIGCHLD, SIG_IGN);
         else 
             waitpid(childpid, &status, WUNTRACED);
         if(in_fd != 0){
